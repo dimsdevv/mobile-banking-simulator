@@ -44,15 +44,15 @@ export async function POST(request: Request) {
         }
       })
 
-      // 4. Create notification (using raw SQL to bypass generation lock)
-      const notifId = crypto.randomUUID()
-      const title = 'Top Up Berhasil'
-      const msg = `Saldo sebesar Rp ${topupAmount.toLocaleString('id-ID')} telah berhasil ditambahkan ke akun Anda via ${bank}.`
-      
-      await tx.$executeRaw`
-        INSERT INTO notifications (id, title, message, type, isRead, userId, createdAt)
-        VALUES (${notifId}, ${title}, ${msg}, 'success', 0, ${user.id}, CURRENT_TIMESTAMP)
-      `
+      await tx.notification.create({
+        data: {
+          title,
+          message: msg,
+          type: 'success',
+          isRead: false,
+          userId: user.id
+        }
+      })
 
       return { updatedUser, transaction }
     })

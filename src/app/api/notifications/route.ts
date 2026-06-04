@@ -10,18 +10,11 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Using raw SQL to bypass Prisma generation lock
-    const rawNotifications = await prisma.$queryRaw<any[]>`
-      SELECT * FROM notifications 
-      WHERE userId = ${userId} 
-      ORDER BY createdAt DESC 
-      LIMIT 20
-    `
-
-    const notifications = rawNotifications.map(n => ({
-      ...n,
-      isRead: n.isRead === 1 || n.isRead === true
-    }))
+    const notifications = await prisma.notification.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    })
 
     const unreadCount = notifications.filter(n => !n.isRead).length
 
@@ -45,11 +38,15 @@ export async function PUT(request: Request) {
     }
 
     if (notificationId) {
-      // Mark specific notification as read using raw SQL
-      await prisma.$executeRaw`UPDATE notifications SET isRead = 1 WHERE id = ${notificationId}`
+      await prisma.notification.update({
+        where: { id: notificationId },
+        data: { isRead: true }
+      })
     } else {
-      // Mark all as read using raw SQL
-      await prisma.$executeRaw`UPDATE notifications SET isRead = 1 WHERE userId = ${userId} AND isRead = 0`
+      await prisma.notification.updateMany({
+        where: { userId, isRead: false },
+        data: { isRead: true }
+      })
     }
 
     return NextResponse.json({ success: true })
