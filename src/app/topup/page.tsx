@@ -307,7 +307,7 @@ export default function TopUpPage() {
                   <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
                 </div>
               ) : (
-                <PinPad onNumberClick={handlePinPress} onDelete={handlePinDelete} disabled={isVerifying} />
+                <PinPad onNumberPress={handlePinPress} onDeletePress={handlePinDelete} disabled={isVerifying} />
               )}
             </motion.div>
           )}
