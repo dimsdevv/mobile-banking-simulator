@@ -35,7 +35,7 @@ export function BalanceCard({ balance, accountNumber, name }: BalanceCardProps) 
         transition={{ duration: 0.6, type: "spring", stiffness: 260, damping: 20 }}
       >
         {/* FRONT SIDE - Balance */}
-        <div className="absolute inset-0 [backface-visibility:hidden]">
+        <div className={`absolute inset-0 [backface-visibility:hidden] ${isFlipped ? 'pointer-events-none' : ''}`}>
           <div className="w-full h-full p-6 rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 text-white shadow-xl shadow-primary-900/20 relative overflow-hidden flex flex-col justify-between">
             {/* Decorative */}
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10 pointer-events-none" />
@@ -53,7 +53,7 @@ export function BalanceCard({ balance, accountNumber, name }: BalanceCardProps) 
                   </button>
                 </div>
               </div>
-              <button onClick={() => setIsFlipped(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-sm transition-colors text-white" title="Lihat Kartu Virtual">
+              <button onClick={() => setIsFlipped(true)} className="p-2 bg-white/10 hover:bg-white/20 rounded-xl backdrop-blur-sm transition-colors text-white relative z-20" title="Lihat Kartu Virtual">
                 <CreditCard size={20} />
               </button>
             </div>
@@ -63,7 +63,7 @@ export function BalanceCard({ balance, accountNumber, name }: BalanceCardProps) 
                 <p className="text-xs text-primary-200">{name}</p>
                 <p className="text-sm font-medium tracking-wider">{accountNumber}</p>
               </div>
-              <button onClick={() => handleCopy(accountNumber)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors">
+              <button onClick={() => handleCopy(accountNumber)} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/30 transition-colors relative z-20">
                 {copied ? <span className="text-xs font-bold text-white">✓</span> : <Copy size={16} />}
               </button>
             </div>
@@ -71,7 +71,7 @@ export function BalanceCard({ balance, accountNumber, name }: BalanceCardProps) 
         </div>
 
         {/* BACK SIDE - Virtual Card */}
-        <div className="absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)]">
+        <div className={`absolute inset-0 [backface-visibility:hidden] [transform:rotateY(180deg)] ${!isFlipped ? 'pointer-events-none' : ''}`}>
           <div className="w-full h-full p-6 rounded-3xl bg-gradient-to-tr from-slate-900 to-slate-800 text-white shadow-xl shadow-slate-900/20 relative overflow-hidden flex flex-col justify-between border border-slate-700">
             {/* Visa logo / Bank name */}
             <div className="flex justify-between items-center relative z-10">

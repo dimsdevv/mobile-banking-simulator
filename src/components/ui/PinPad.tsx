@@ -8,9 +8,10 @@ interface PinPadProps {
   onNumberPress: (num: string) => void
   onDeletePress: () => void
   disabled?: boolean
+  leftSlot?: React.ReactNode
 }
 
-export function PinPad({ onNumberPress, onDeletePress, disabled = false }: PinPadProps) {
+export function PinPad({ onNumberPress, onDeletePress, disabled = false, leftSlot }: PinPadProps) {
   const numbers = [
     ['1', '2', '3'],
     ['4', '5', '6'],
@@ -22,7 +23,7 @@ export function PinPad({ onNumberPress, onDeletePress, disabled = false }: PinPa
     <div className="w-full max-w-xs mx-auto grid grid-cols-3 gap-y-6 gap-x-6">
       {numbers.flat().map((btn, index) => {
         if (btn === '') {
-          return <div key={`empty-${index}`} />
+          return <div key={`empty-${index}`} className="flex items-center justify-center w-full h-full">{leftSlot}</div>
         }
 
         const isDelete = btn === 'delete'

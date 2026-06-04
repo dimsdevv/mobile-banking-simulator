@@ -24,8 +24,25 @@ model User {
   sentTransactions     Transaction[] @relation("Sender")
   receivedTransactions Transaction[] @relation("Recipient")
   savedRecipients      SavedRecipient[]
+  notifications        Notification[]
+  savingsGoals         SavingsGoal[]
 
   @@map("users")
+}
+
+model SavingsGoal {
+  id        String   @id @default(uuid())
+  name      String
+  target    BigInt
+  current   BigInt   @default(0)
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("savings_goals")
 }
 
 model Transaction {
@@ -72,4 +89,20 @@ model SavedRecipient {
 
   @@unique([userId, accountNumber])
   @@map("saved_recipients")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   @default("info") // 'info', 'success', 'warning'
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("notifications")
 }

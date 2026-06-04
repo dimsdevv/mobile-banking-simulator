@@ -26,18 +26,23 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = React.useState(false)
   const [editName, setEditName] = React.useState('')
   const [editEmail, setEditEmail] = React.useState('')
+  const [editAvatar, setEditAvatar] = React.useState('')
   const [saving, setSaving] = React.useState(false)
   const [toast, setToast] = React.useState('')
 
   // About & Change PIN modals
   const [showAbout, setShowAbout] = React.useState(false)
   const [showChangePin, setShowChangePin] = React.useState(false)
-  const [pinStep, setPinStep] = React.useState<'old' | 'new' | 'confirm'>('old')
+  const [pinStep, setPinStep] = React.useState<'old' | 'new' | 'confirm' | 'forgot-email' | 'forgot-otp'>('old')
   const [oldPin, setOldPin] = React.useState('')
   const [newPin, setNewPin] = React.useState('')
   const [confirmPin, setConfirmPin] = React.useState('')
   const [pinError, setPinError] = React.useState('')
   const [pinLoading, setPinLoading] = React.useState(false)
+  
+  const [forgotEmail, setForgotEmail] = React.useState('')
+  const [forgotOtp, setForgotOtp] = React.useState('')
+  const [otpLoading, setOtpLoading] = React.useState(false)
 
   // ---- Data fetch ----
   React.useEffect(() => {
@@ -83,6 +88,51 @@ export default function ProfilePage() {
     })
   }
 
+  const handleLanguageChange = async (langKey: string) => {
+    if (!userId) return
+    try {
+      const res = await fetch('/api/user/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, language: langKey })
+      })
+      const data = await res.json()
+      if (data.success) {
+        setUser(data.user)
+        doToast(langKey === 'en' ? 'Language changed to English' : 'Bahasa diubah ke Indonesia')
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  // Language dictionary
+  const dict = {
+    id: {
+      title: "Profil & Pengaturan", personalInfo: "Informasi Pribadi", change: "Ubah",
+      fullName: "Nama Lengkap", email: "Email", accountNo: "Nomor Rekening",
+      chooseAvatar: "Pilih Avatar", cancel: "Batal", save: "Simpan",
+      appearance: "Tampilan", light: "Terang", dark: "Gelap", system: "Sistem",
+      language: "Bahasa / Language", indonesia: "Indonesia", english: "English",
+      security: "Keamanan", changePin: "Ubah PIN", changePinDesc: "Ganti PIN login Anda",
+      about: "Tentang Aplikasi", aboutDesc: "v1.0.0 — Mobile Banking Simulator",
+      logout: "Keluar dari Akun", changePinTitle: "Ubah PIN", savingProfile: "Profil berhasil diperbarui"
+    },
+    en: {
+      title: "Profile & Settings", personalInfo: "Personal Information", change: "Edit",
+      fullName: "Full Name", email: "Email", accountNo: "Account Number",
+      chooseAvatar: "Choose Avatar", cancel: "Cancel", save: "Save",
+      appearance: "Appearance", light: "Light", dark: "Dark", system: "System",
+      language: "Language / Bahasa", indonesia: "Indonesia", english: "English",
+      security: "Security", changePin: "Change PIN", changePinDesc: "Change your login PIN",
+      about: "About App", aboutDesc: "v1.0.0 — Mobile Banking Simulator",
+      logout: "Log Out", changePinTitle: "Change PIN", savingProfile: "Profile successfully updated"
+    }
+  }
+
+  const lang = (user?.language === 'en') ? 'en' : 'id'
+  const t = dict[lang]
+
   // ---- Profile edit ----
   const handleSaveProfile = async () => {
     if (!editName.trim()) return
@@ -97,7 +147,7 @@ export default function ProfilePage() {
       if (data.success) {
         setUser(data.user)
         setIsEditing(false)
-        doToast('Profil berhasil diperbarui')
+        doToast(t.savingProfile)
       }
     } catch (error) {
       console.error(error)
@@ -116,7 +166,7 @@ export default function ProfilePage() {
   // ---- Change PIN logic ----
   const openChangePin = () => {
     setShowChangePin(true); setPinStep('old')
-    setOldPin(''); setNewPin(''); setConfirmPin(''); setPinError('')
+    setOldPin(''); setNewPin(''); setConfirmPin(''); setPinError(''); setForgotEmail(''); setForgotOtp('')
   }
 
   const currentPinVal = pinStep === 'old' ? oldPin : pinStep === 'new' ? newPin : confirmPin
@@ -145,13 +195,19 @@ export default function ProfilePage() {
   const submitPin = async (confirmed: string) => {
     setPinLoading(true); setPinError('')
     try {
-      const res = await fetch('/api/user/change-pin', {
+      // If coming from forgot PIN, use reset-pin API, else change-pin
+      const endpoint = forgotEmail ? '/api/auth/reset-pin' : '/api/user/change-pin'
+      const bodyPayload = forgotEmail 
+        ? { userId, newPin: confirmed } 
+        : { userId, currentPin: oldPin, newPin: confirmed }
+
+      const res = await fetch(endpoint, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, currentPin: oldPin, newPin: confirmed })
+        body: JSON.stringify(bodyPayload)
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Gagal mengubah PIN')
-      setShowChangePin(false); doToast('PIN berhasil diubah')
+      setShowChangePin(false); doToast('PIN berhasil diperbarui')
     } catch (err: any) {
       setPinError(err.message)
       if (err.message === 'PIN lama salah') {
@@ -160,7 +216,46 @@ export default function ProfilePage() {
     } finally { setPinLoading(false) }
   }
 
-  const pinTitle = pinStep === 'old' ? 'Masukkan PIN Lama' : pinStep === 'new' ? 'Masukkan PIN Baru' : 'Konfirmasi PIN Baru'
+  // ---- Forgot PIN Logic ----
+  const handleForgotPin = () => {
+    setPinStep('forgot-email')
+    setPinError('')
+  }
+
+  const submitForgotEmail = () => {
+    if (!forgotEmail) { setPinError('Email harus diisi'); return }
+    if (forgotEmail !== user?.email) { setPinError('Email tidak terdaftar pada akun ini'); return }
+    
+    setPinError('')
+    setPinStep('forgot-otp')
+    setOtpLoading(true)
+
+    // Simulate sending OTP and auto-filling
+    setTimeout(() => {
+      setOtpLoading(false)
+      // Auto fill animation
+      let i = 0
+      const dummyOtp = "1234"
+      const intv = setInterval(() => {
+        setForgotOtp(prev => prev + dummyOtp[i])
+        i++
+        if (i >= 4) {
+          clearInterval(intv)
+          setTimeout(() => {
+             setPinStep('new')
+             setNewPin('')
+             setConfirmPin('')
+          }, 500)
+        }
+      }, 300)
+    }, 2000)
+  }
+
+  const pinTitle = pinStep === 'old' ? 'Masukkan PIN Lama' 
+                 : pinStep === 'new' ? 'Buat PIN Baru' 
+                 : pinStep === 'confirm' ? 'Konfirmasi PIN Baru'
+                 : pinStep === 'forgot-email' ? 'Verifikasi Identitas'
+                 : 'Verifikasi OTP'
 
   // ---- Loading ----
   if (isLoading) {
@@ -178,7 +273,7 @@ export default function ProfilePage() {
         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.push('/dashboard')}>
           <ArrowLeft size={24} />
         </Button>
-        <h1 className="text-lg font-bold">Profil & Pengaturan</h1>
+        <h1 className="text-lg font-bold">{t.title}</h1>
       </header>
 
       <div className="container mx-auto px-4 max-w-md py-6 space-y-6">
@@ -206,19 +301,19 @@ export default function ProfilePage() {
         {/* Edit Profile */}
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <SectionCard>
-            <SectionHeader icon={<Pencil size={18} />} title="Informasi Pribadi" action={
-              !isEditing ? <button onClick={() => setIsEditing(true)} className="text-sm text-primary-600 font-medium hover:underline">Ubah</button> : null
+            <SectionHeader icon={<Pencil size={18} />} title={t.personalInfo} action={
+              !isEditing ? <button onClick={() => setIsEditing(true)} className="text-sm text-primary-600 font-medium hover:underline">{t.change}</button> : null
             } />
             {!isEditing ? (
               <div className="space-y-4 mt-4">
-                <InfoRow icon={<User size={16} />} label="Nama Lengkap" value={user?.name} />
-                <InfoRow icon={<Mail size={16} />} label="Email" value={user?.email} />
-                <InfoRow icon={<CreditCard size={16} />} label="Nomor Rekening" value={user?.accountNumber} />
+                <InfoRow icon={<User size={16} />} label={t.fullName} value={user?.name} />
+                <InfoRow icon={<Mail size={16} />} label={t.email} value={user?.email} />
+                <InfoRow icon={<CreditCard size={16} />} label={t.accountNo} value={user?.accountNumber} />
               </div>
             ) : (
               <div className="space-y-4 mt-4">
                 <div className="space-y-2">
-                  <label className="text-xs font-semibold text-slate-500">Pilih Avatar</label>
+                  <label className="text-xs font-semibold text-slate-500">{t.chooseAvatar}</label>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {['Felix', 'Aneka', 'Mimi', 'Jasper', 'Tinkerbell'].map(seed => {
                       const url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&backgroundColor=c0aede`
@@ -235,16 +330,16 @@ export default function ProfilePage() {
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-500">Nama Lengkap</label>
+                  <label className="text-xs font-semibold text-slate-500">{t.fullName}</label>
                   <Input value={editName} onChange={e => setEditName(e.target.value)} />
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-slate-500">Email</label>
+                  <label className="text-xs font-semibold text-slate-500">{t.email}</label>
                   <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} type="email" />
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <Button variant="outline" className="flex-1" onClick={() => { setIsEditing(false); setEditName(user?.name); setEditEmail(user?.email); setEditAvatar(user?.avatarUrl || '') }}>Batal</Button>
-                  <Button className="flex-1" onClick={handleSaveProfile} isLoading={saving}>Simpan</Button>
+                  <Button variant="outline" className="flex-1" onClick={() => { setIsEditing(false); setEditName(user?.name); setEditEmail(user?.email); setEditAvatar(user?.avatarUrl || '') }}>{t.cancel}</Button>
+                  <Button className="flex-1" onClick={handleSaveProfile} isLoading={saving}>{t.save}</Button>
                 </div>
               </div>
             )}
@@ -254,23 +349,23 @@ export default function ProfilePage() {
         {/* Theme */}
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
           <SectionCard>
-            <SectionHeader icon={<Palette size={18} />} title="Tampilan" />
+            <SectionHeader icon={<Palette size={18} />} title={t.appearance} />
             <div className="grid grid-cols-3 gap-3 mt-4">
               {([
-                { key: 'light' as Theme, label: 'Terang', icon: <Sun size={20} /> },
-                { key: 'dark' as Theme, label: 'Gelap', icon: <Moon size={20} /> },
-                { key: 'system' as Theme, label: 'Sistem', icon: <Monitor size={20} /> },
-              ]).map(t => (
-                <motion.button key={t.key} whileTap={{ scale: 0.95 }} onClick={() => handleThemeChange(t.key)}
+                { key: 'light' as Theme, label: t.light, icon: <Sun size={20} /> },
+                { key: 'dark' as Theme, label: t.dark, icon: <Moon size={20} /> },
+                { key: 'system' as Theme, label: t.system, icon: <Monitor size={20} /> },
+              ]).map(tItem => (
+                <motion.button key={tItem.key} whileTap={{ scale: 0.95 }} onClick={() => handleThemeChange(tItem.key)}
                   className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all ${
-                    activeTheme === t.key
+                    activeTheme === tItem.key
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
                       : 'border-slate-200 dark:border-slate-800 text-slate-500 hover:border-slate-300 dark:hover:border-slate-700'
                   }`}
                 >
-                  {t.icon}
-                  <span className="text-xs font-semibold">{t.label}</span>
-                  {activeTheme === t.key && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><Check size={14} className="text-primary-600" /></motion.div>}
+                  {tItem.icon}
+                  <span className="text-xs font-semibold">{tItem.label}</span>
+                  {activeTheme === tItem.key && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><Check size={14} className="text-primary-600" /></motion.div>}
                 </motion.button>
               ))}
             </div>
@@ -280,13 +375,13 @@ export default function ProfilePage() {
         {/* Language */}
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
           <SectionCard>
-            <SectionHeader icon={<Globe size={18} />} title="Bahasa / Language" />
+            <SectionHeader icon={<Globe size={18} />} title={t.language} />
             <div className="grid grid-cols-2 gap-3 mt-4">
               {([
-                { key: 'id', label: 'Indonesia', flag: '🇮🇩' },
-                { key: 'en', label: 'English', flag: '🇬🇧' },
+                { key: 'id', label: t.indonesia, flag: '🇮🇩' },
+                { key: 'en', label: t.english, flag: '🇬🇧' },
               ]).map(l => (
-                <motion.button key={l.key} whileTap={{ scale: 0.95 }} onClick={() => { doToast(`Bahasa diubah ke ${l.label}`); }}
+                <motion.button key={l.key} whileTap={{ scale: 0.95 }} onClick={() => handleLanguageChange(l.key)}
                   className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${
                     user?.language === l.key || (!user?.language && l.key === 'id')
                       ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
@@ -307,14 +402,14 @@ export default function ProfilePage() {
         {/* Security */}
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }}>
           <SectionCard>
-            <SectionHeader icon={<Shield size={18} />} title="Keamanan" />
+            <SectionHeader icon={<Shield size={18} />} title={t.security} />
             <div className="mt-4">
               <button onClick={openChangePin} className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors text-left">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 flex items-center justify-center"><Shield size={16} /></div>
                   <div>
-                    <p className="text-sm font-semibold">Ubah PIN</p>
-                    <p className="text-xs text-slate-500">Ganti PIN login Anda</p>
+                    <p className="text-sm font-semibold">{t.changePin}</p>
+                    <p className="text-xs text-slate-500">{t.changePinDesc}</p>
                   </div>
                 </div>
                 <ChevronRight size={18} className="text-slate-400" />
@@ -326,14 +421,14 @@ export default function ProfilePage() {
         {/* About */}
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
           <SectionCard>
-            <SectionHeader icon={<Info size={18} />} title="Tentang Aplikasi" />
+            <SectionHeader icon={<Info size={18} />} title={t.about} />
             <div className="mt-4">
               <button onClick={() => setShowAbout(true)} className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors text-left">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-600 flex items-center justify-center"><Info size={16} /></div>
                   <div>
                     <p className="text-sm font-semibold">SimBank</p>
-                    <p className="text-xs text-slate-500">v1.0.0 — Mobile Banking Simulator</p>
+                    <p className="text-xs text-slate-500">{t.aboutDesc}</p>
                   </div>
                 </div>
                 <ChevronRight size={18} className="text-slate-400" />
@@ -345,7 +440,7 @@ export default function ProfilePage() {
         {/* Logout */}
         <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}>
           <Button variant="ghost" className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30" onClick={handleLogout}>
-            <LogOut className="w-4 h-4 mr-2" /> Keluar dari Akun
+            <LogOut className="w-4 h-4 mr-2" /> {t.logout}
           </Button>
         </motion.div>
       </div>
@@ -415,26 +510,81 @@ export default function ProfilePage() {
                 <button onClick={() => setShowChangePin(false)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center"><X size={18} /></button>
               </div>
 
-              {/* Step indicator */}
-              <div className="flex justify-center gap-2">
-                {(['old', 'new', 'confirm'] as const).map((s, i) => (
-                  <div key={s} className={`h-1.5 rounded-full transition-all ${
-                    s === pinStep ? 'w-8 bg-primary-600' : i < ['old', 'new', 'confirm'].indexOf(pinStep) ? 'w-6 bg-primary-300' : 'w-6 bg-slate-200 dark:bg-slate-700'
-                  }`} />
-                ))}
-              </div>
+              {/* Step indicator (Only for PIN steps) */}
+              {['old', 'new', 'confirm'].includes(pinStep) && (
+                <div className="flex justify-center gap-2">
+                  {(['old', 'new', 'confirm'] as const).map((s, i) => (
+                    <div key={s} className={`h-1.5 rounded-full transition-all ${
+                      s === pinStep ? 'w-8 bg-primary-600' : i < ['old', 'new', 'confirm'].indexOf(pinStep as any) ? 'w-6 bg-primary-300' : 'w-6 bg-slate-200 dark:bg-slate-700'
+                    }`} />
+                  ))}
+                </div>
+              )}
 
-              {/* PIN dots */}
-              <div className="flex justify-center gap-4 py-2">
-                {[...Array(6)].map((_, i) => (
-                  <motion.div key={i} animate={{ scale: i < currentPinVal.length ? 1.2 : 1 }}
-                    className={`w-4 h-4 rounded-full transition-colors ${i < currentPinVal.length ? 'bg-primary-600 shadow-lg shadow-primary-500/50' : 'bg-slate-200 dark:bg-slate-800'}`} />
-                ))}
-              </div>
+              {/* Forgot Email Step */}
+              {pinStep === 'forgot-email' && (
+                <div className="space-y-4 py-4">
+                  <p className="text-sm text-slate-500 text-center">Masukkan alamat email yang terdaftar untuk menerima kode OTP.</p>
+                  <Input 
+                    type="email" 
+                    placeholder="nama@email.com" 
+                    value={forgotEmail} 
+                    onChange={e => setForgotEmail(e.target.value)} 
+                  />
+                  {pinError && <p className="text-sm text-center text-red-500 font-medium">{pinError}</p>}
+                  <Button className="w-full mt-4" onClick={submitForgotEmail}>Kirim OTP</Button>
+                </div>
+              )}
 
-              {pinError && <p className="text-sm text-center text-red-500 font-medium animate-shake">{pinError}</p>}
+              {/* Forgot OTP Step */}
+              {pinStep === 'forgot-otp' && (
+                <div className="space-y-6 py-4 text-center">
+                  <p className="text-sm text-slate-500">Kode 4 digit telah dikirim ke {forgotEmail}</p>
+                  
+                  {otpLoading ? (
+                    <div className="flex flex-col items-center justify-center space-y-3 py-6">
+                      <div className="w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full animate-spin" />
+                      <p className="text-xs text-slate-400 animate-pulse">Mengirim ke email Anda...</p>
+                    </div>
+                  ) : (
+                    <div className="flex justify-center gap-4 py-6">
+                      {[...Array(4)].map((_, i) => (
+                        <div key={i} className="w-12 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-2xl font-bold border border-slate-200 dark:border-slate-700">
+                          {forgotOtp[i] || ''}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {!otpLoading && <p className="text-xs text-primary-500 font-medium">Auto-fill simulator diaktifkan...</p>}
+                </div>
+              )}
 
-              <PinPad onNumberPress={onPinPress} onDeletePress={onPinDelete} disabled={pinLoading} />
+              {/* PIN input and PinPad */}
+              {['old', 'new', 'confirm'].includes(pinStep) && (
+                <>
+                  <div className="flex justify-center gap-4 py-2">
+                    {[...Array(6)].map((_, i) => (
+                      <motion.div key={i} animate={{ scale: i < currentPinVal.length ? 1.2 : 1 }}
+                        className={`w-4 h-4 rounded-full transition-colors ${i < currentPinVal.length ? 'bg-primary-600 shadow-lg shadow-primary-500/50' : 'bg-slate-200 dark:bg-slate-800'}`} />
+                    ))}
+                  </div>
+
+                  {pinError && <p className="text-sm text-center text-red-500 font-medium animate-shake">{pinError}</p>}
+
+                  <PinPad 
+                    onNumberPress={onPinPress} 
+                    onDeletePress={onPinDelete} 
+                    disabled={pinLoading} 
+                    leftSlot={
+                      pinStep === 'old' ? (
+                        <button onClick={handleForgotPin} className="text-xs sm:text-sm font-bold text-primary-600 hover:text-primary-700 transition-colors">
+                          Lupa<br/>PIN?
+                        </button>
+                      ) : null
+                    }
+                  />
+                </>
+              )}
             </motion.div>
           </motion.div>
         )}

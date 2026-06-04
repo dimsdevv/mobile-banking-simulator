@@ -11,10 +11,10 @@ export function QuickActions() {
   const [isQROpen, setIsQROpen] = React.useState(false)
 
   const actions = [
-    { icon: Send, label: 'Transfer', color: 'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400', onClick: () => router.push('/transfer') },
-    { icon: Download, label: 'Top Up', color: 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400', onClick: () => alert('Fitur Top Up akan datang') },
-    { icon: ArrowLeftRight, label: 'Mutasi', color: 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400', onClick: () => router.push('/history') },
-    { icon: QrCode, label: 'QRIS', color: 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400', onClick: () => setIsQROpen(true) },
+    { icon: Send, label: 'Transfer', color: 'text-blue-500 dark:text-blue-400', glow: 'bg-blue-500', onClick: () => router.push('/transfer') },
+    { icon: Download, label: 'Top Up', color: 'text-emerald-500 dark:text-emerald-400', glow: 'bg-emerald-500', onClick: () => router.push('/topup') },
+    { icon: ArrowLeftRight, label: 'Mutasi', color: 'text-purple-500 dark:text-purple-400', glow: 'bg-purple-500', onClick: () => router.push('/history') },
+    { icon: QrCode, label: 'QRIS', color: 'text-orange-500 dark:text-orange-400', glow: 'bg-orange-500', onClick: () => setIsQROpen(true) },
   ]
 
   return (
@@ -26,15 +26,20 @@ export function QuickActions() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={action.onClick}
-            className="flex flex-col items-center gap-2 group"
+            className="flex flex-col items-center gap-3 group"
           >
-            <div className={`w-14 h-14 flex items-center justify-center rounded-2xl ${action.color} shadow-sm group-hover:shadow-md transition-shadow`}>
-              <action.icon size={24} />
+            <div className="relative w-14 h-14 sm:w-16 sm:h-16 flex items-center justify-center">
+              {/* Soft background glow */}
+              <div className={`absolute inset-0 ${action.glow} blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-300 rounded-full`} />
+              
+              {/* Glass container */}
+              <div className="relative z-10 w-full h-full flex items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-white/60 dark:border-slate-700/50 rounded-[1.25rem] shadow-sm group-hover:shadow-md transition-all duration-300 group-hover:-translate-y-1">
+                <action.icon size={26} className={`${action.color} transition-transform duration-300 group-hover:scale-110`} strokeWidth={2} />
+              </div>
             </div>
-            <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+            <span className="text-[11px] sm:text-xs font-semibold text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
               {action.label}
             </span>
           </motion.button>

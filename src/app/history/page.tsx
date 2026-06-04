@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import {
   ArrowLeft, ArrowDownLeft, ArrowUpRight, Search, X,
-  Calendar, Filter, TrendingUp, TrendingDown, ChevronDown
+  Calendar, Filter, TrendingUp, TrendingDown, ChevronDown, Download, Share2, Check
 } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
@@ -58,6 +58,12 @@ export default function HistoryPage() {
   const [page, setPage] = React.useState(1)
   const [totalPages, setTotalPages] = React.useState(1)
 
+  // Extra states
+  const [isDownloading, setIsDownloading] = React.useState(false)
+  const [downloadProgress, setDownloadProgress] = React.useState(0)
+  const [toast, setToast] = React.useState('')
+  const [dateFilterMode, setDateFilterMode] = React.useState<'all'|'7days'|'thisMonth'|'custom'>('all')
+
   React.useEffect(() => {
     if (!isAuthenticated) { router.push('/login'); return }
   }, [isAuthenticated, router])
@@ -100,8 +106,71 @@ export default function HistoryPage() {
     setPage(1)
   }
 
+  const handleDateFilterMode = (mode: 'all'|'7days'|'thisMonth'|'custom') => {
+    setDateFilterMode(mode)
+    setPage(1)
+    
+    const now = new Date()
+    if (mode === 'all') {
+      setStartDate('')
+      setEndDate('')
+    } else if (mode === '7days') {
+      const past = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      setStartDate(past.toISOString().split('T')[0])
+      setEndDate(now.toISOString().split('T')[0])
+    } else if (mode === 'thisMonth') {
+      const firstDay = new Date(now.getFullYear(), now.getMonth(), 1)
+      setStartDate(firstDay.toISOString().split('T')[0])
+      setEndDate(now.toISOString().split('T')[0])
+    }
+  }
+
+  const handleDownloadStatement = () => {
+    setIsDownloading(true)
+    setDownloadProgress(0)
+    
+    let progress = 0
+    const intv = setInterval(() => {
+      progress += Math.random() * 30
+      if (progress >= 100) {
+        progress = 100
+        clearInterval(intv)
+        setTimeout(() => {
+          setIsDownloading(false)
+          setToast('e-Statement bulan ini berhasil diunduh (PDF)')
+          setTimeout(() => setToast(''), 4000)
+        }, 600)
+      }
+      setDownloadProgress(progress)
+    }, 200)
+  }
+
+  const handleShareReceipt = async () => {
+    if (navigator.share && selectedTx) {
+      try {
+        await navigator.share({
+          title: 'Resi Transaksi SimBank',
+          text: `Bukti Transaksi SimBank\nRef: ${selectedTx.reference}\nTotal: Rp ${formatCurrency(BigInt(selectedTx.totalAmount))}`,
+        })
+      } catch (err) {
+        // user cancelled or share failed
+      }
+    } else {
+      setToast('Link resi disalin ke clipboard')
+      setTimeout(() => setToast(''), 3000)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+      <AnimatePresence>
+        {toast && (
+          <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[200] bg-green-600 text-white px-6 py-3 rounded-2xl shadow-xl text-sm font-medium flex items-center gap-2">
+            <Check size={16} /> {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Header */}
       <header className="sticky top-0 z-50 glass p-4 flex items-center gap-4">
         <Button variant="ghost" size="icon" className="rounded-full" onClick={() => router.push('/dashboard')}>
@@ -151,6 +220,20 @@ export default function HistoryPage() {
           </div>
         )}
 
+        {/* Download Button */}
+        <Button variant="outline" className="w-full bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-primary-600" onClick={handleDownloadStatement} disabled={isDownloading}>
+          {isDownloading ? (
+            <div className="flex items-center w-full px-2">
+              <span className="text-xs mr-3 whitespace-nowrap font-medium text-slate-500">Mengunduh {Math.floor(downloadProgress)}%</span>
+              <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-full bg-primary-500 rounded-full" style={{ width: `${downloadProgress}%` }} />
+              </div>
+            </div>
+          ) : (
+            <><Download size={18} className="mr-2" /> Unduh e-Statement</>
+          )}
+        </Button>
+
         {/* Search */}
         <div className="relative">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -199,32 +282,59 @@ export default function HistoryPage() {
                   </div>
                 </div>
 
-                {/* Date filter */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Dari Tanggal</label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={e => { setStartDate(e.target.value); setPage(1) }}
-                      className="flex h-10 w-full rounded-xl border border-slate-200 bg-white/50 px-3 text-sm dark:border-slate-800 dark:bg-slate-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-slate-500">Sampai Tanggal</label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={e => { setEndDate(e.target.value); setPage(1) }}
-                      className="flex h-10 w-full rounded-xl border border-slate-200 bg-white/50 px-3 text-sm dark:border-slate-800 dark:bg-slate-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-                    />
+                {/* Date filter Smart */}
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500">Rentang Waktu</label>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: 'all', label: 'Semua Waktu' },
+                      { value: '7days', label: '7 Hari Terakhir' },
+                      { value: 'thisMonth', label: 'Bulan Ini' },
+                      { value: 'custom', label: 'Kustom' },
+                    ].map(f => (
+                      <Button
+                        key={f.value}
+                        variant={dateFilterMode === f.value ? 'default' : 'outline'}
+                        size="sm"
+                        onClick={() => handleDateFilterMode(f.value as any)}
+                        className="flex-1 min-w-[100px]"
+                      >
+                        {f.label}
+                      </Button>
+                    ))}
                   </div>
                 </div>
 
+                {/* Custom Date filter */}
+                <AnimatePresence>
+                  {dateFilterMode === 'custom' && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="grid grid-cols-2 gap-3 overflow-hidden">
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-500">Dari Tanggal</label>
+                        <input
+                          type="date"
+                          value={startDate}
+                          onChange={e => { setStartDate(e.target.value); setPage(1) }}
+                          className="flex h-10 w-full rounded-xl border border-slate-200 bg-white/50 px-3 text-sm dark:border-slate-800 dark:bg-slate-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-semibold text-slate-500">Sampai Tanggal</label>
+                        <input
+                          type="date"
+                          value={endDate}
+                          onChange={e => { setEndDate(e.target.value); setPage(1) }}
+                          className="flex h-10 w-full rounded-xl border border-slate-200 bg-white/50 px-3 text-sm dark:border-slate-800 dark:bg-slate-900/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 {/* Clear filters */}
-                {(filterType !== 'all' || startDate || endDate) && (
+                {(filterType !== 'all' || dateFilterMode !== 'all') && (
                   <Button variant="ghost" size="sm" className="w-full text-red-500" onClick={() => {
-                    setFilterType('all'); setStartDate(''); setEndDate(''); setPage(1)
+                    setFilterType('all'); handleDateFilterMode('all'); setPage(1)
                   }}>
                     Reset Filter
                   </Button>
@@ -351,6 +461,13 @@ export default function HistoryPage() {
                     hour: '2-digit', minute: '2-digit'
                   })} />
                 </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="pt-2">
+                <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white dark:bg-primary-600 dark:hover:bg-primary-700" onClick={handleShareReceipt}>
+                  <Share2 size={18} className="mr-2" /> Bagikan Resi
+                </Button>
               </div>
             </motion.div>
           </motion.div>

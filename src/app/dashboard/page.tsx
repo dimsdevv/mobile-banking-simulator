@@ -7,6 +7,8 @@ import { Header } from "@/components/layout/Header"
 import { BalanceCard } from "@/components/dashboard/BalanceCard"
 import { QuickActions } from "@/components/dashboard/QuickActions"
 import { TransactionHistory } from "@/components/dashboard/TransactionHistory"
+import { SavingsGoal } from "@/components/dashboard/SavingsGoal"
+import { RecentContacts } from "@/components/dashboard/RecentContacts"
 import { LogOut } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 
@@ -17,27 +19,33 @@ export default function DashboardPage() {
   const [data, setData] = React.useState<any>(null)
   const [isLoading, setIsLoading] = React.useState(true)
 
+  const fetchProfile = React.useCallback(async () => {
+    if (!userId) return
+    try {
+      const res = await fetch(`/api/user/profile?userId=${userId}`)
+      if (!res.ok) throw new Error('Gagal memuat data')
+      const json = await res.json()
+      setData(json)
+    } catch (error) {
+      console.error(error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [userId])
+
   React.useEffect(() => {
     if (!isAuthenticated || !userId) {
       router.push('/login')
       return
     }
-
-    const fetchProfile = async () => {
-      try {
-        const res = await fetch(`/api/user/profile?userId=${userId}`)
-        if (!res.ok) throw new Error('Gagal memuat data')
-        const json = await res.json()
-        setData(json)
-      } catch (error) {
-        console.error(error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
     fetchProfile()
-  }, [userId, isAuthenticated, router])
+  }, [userId, isAuthenticated, router, fetchProfile])
+
+  React.useEffect(() => {
+    const handleRefresh = () => fetchProfile()
+    window.addEventListener('refresh_profile', handleRefresh)
+    return () => window.removeEventListener('refresh_profile', handleRefresh)
+  }, [fetchProfile])
 
   const handleLogout = () => {
     logout()
@@ -65,7 +73,7 @@ export default function DashboardPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
-      <Header userName={user.name} />
+      <Header userName={user.name} avatarUrl={user.avatarUrl} />
       
       <div className="container mx-auto px-4 space-y-8 max-w-md">
         
@@ -81,6 +89,16 @@ export default function DashboardPage() {
         {/* Quick Actions */}
         <section className="glass p-6 rounded-3xl">
           <QuickActions />
+        </section>
+
+        {/* Transfer Kilat (Recent Contacts) */}
+        <section>
+          <RecentContacts transactions={recentTransactions} />
+        </section>
+
+        {/* Kantong Nabung (Savings Goal) */}
+        <section>
+          <SavingsGoal />
         </section>
 
         {/* Transactions */}
