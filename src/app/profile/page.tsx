@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useRouter } from "next/navigation"
 import {
   ArrowLeft, User, Mail, CreditCard, Palette, Moon, Sun, Monitor,
-  ChevronRight, LogOut, Shield, Info, ExternalLink, Check, X, Pencil
+  ChevronRight, LogOut, Shield, Info, ExternalLink, Check, X, Pencil, Globe
 } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
@@ -49,6 +49,7 @@ export default function ProfilePage() {
           setUser(d.user)
           setEditName(d.user.name)
           setEditEmail(d.user.email)
+          setEditAvatar(d.user.avatarUrl || '')
           setActiveTheme(d.user.theme || 'system')
         }
       })
@@ -90,7 +91,7 @@ export default function ProfilePage() {
       const res = await fetch('/api/user/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, name: editName.trim(), email: editEmail.trim() })
+        body: JSON.stringify({ userId, name: editName.trim(), email: editEmail.trim(), avatarUrl: editAvatar })
       })
       const data = await res.json()
       if (data.success) {
@@ -187,8 +188,12 @@ export default function ProfilePage() {
           className="p-6 rounded-3xl bg-gradient-to-br from-primary-600 to-primary-800 text-white relative overflow-hidden">
           <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl transform translate-x-10 -translate-y-10" />
           <div className="relative z-10 flex items-center gap-5">
-            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center border-2 border-white/30 shrink-0">
-              <User size={36} className="text-white" />
+            <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center border-2 border-white/30 shrink-0 overflow-hidden">
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User size={36} className="text-white" />
+              )}
             </div>
             <div className="min-w-0 space-y-1">
               <h2 className="text-xl font-bold truncate">{user?.name}</h2>
@@ -212,6 +217,23 @@ export default function ProfilePage() {
               </div>
             ) : (
               <div className="space-y-4 mt-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-slate-500">Pilih Avatar</label>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {['Felix', 'Aneka', 'Mimi', 'Jasper', 'Tinkerbell'].map(seed => {
+                      const url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}&backgroundColor=c0aede`
+                      return (
+                        <button
+                          key={seed}
+                          onClick={() => setEditAvatar(url)}
+                          className={`w-12 h-12 rounded-full border-2 shrink-0 overflow-hidden ${editAvatar === url ? 'border-primary-500' : 'border-transparent'}`}
+                        >
+                          <img src={url} alt={seed} className="w-full h-full object-cover bg-slate-100 dark:bg-slate-800" />
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-500">Nama Lengkap</label>
                   <Input value={editName} onChange={e => setEditName(e.target.value)} />
@@ -221,7 +243,7 @@ export default function ProfilePage() {
                   <Input value={editEmail} onChange={e => setEditEmail(e.target.value)} type="email" />
                 </div>
                 <div className="flex gap-3 pt-2">
-                  <Button variant="outline" className="flex-1" onClick={() => { setIsEditing(false); setEditName(user?.name); setEditEmail(user?.email) }}>Batal</Button>
+                  <Button variant="outline" className="flex-1" onClick={() => { setIsEditing(false); setEditName(user?.name); setEditEmail(user?.email); setEditAvatar(user?.avatarUrl || '') }}>Batal</Button>
                   <Button className="flex-1" onClick={handleSaveProfile} isLoading={saving}>Simpan</Button>
                 </div>
               </div>
@@ -249,6 +271,33 @@ export default function ProfilePage() {
                   {t.icon}
                   <span className="text-xs font-semibold">{t.label}</span>
                   {activeTheme === t.key && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><Check size={14} className="text-primary-600" /></motion.div>}
+                </motion.button>
+              ))}
+            </div>
+          </SectionCard>
+        </motion.div>
+
+        {/* Language */}
+        <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.12 }}>
+          <SectionCard>
+            <SectionHeader icon={<Globe size={18} />} title="Bahasa / Language" />
+            <div className="grid grid-cols-2 gap-3 mt-4">
+              {([
+                { key: 'id', label: 'Indonesia', flag: '🇮🇩' },
+                { key: 'en', label: 'English', flag: '🇬🇧' },
+              ]).map(l => (
+                <motion.button key={l.key} whileTap={{ scale: 0.95 }} onClick={() => { doToast(`Bahasa diubah ke ${l.label}`); }}
+                  className={`flex items-center justify-between p-4 rounded-2xl border-2 transition-all ${
+                    user?.language === l.key || (!user?.language && l.key === 'id')
+                      ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400'
+                      : 'border-slate-200 dark:border-slate-800 text-slate-500 hover:border-slate-300 dark:hover:border-slate-700'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{l.flag}</span>
+                    <span className="text-sm font-semibold">{l.label}</span>
+                  </div>
+                  {(user?.language === l.key || (!user?.language && l.key === 'id')) && <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}><Check size={16} className="text-primary-600" /></motion.div>}
                 </motion.button>
               ))}
             </div>

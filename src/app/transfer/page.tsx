@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card"
 import { PinPad } from "@/components/ui/PinPad"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { formatCurrency } from "@/lib/utils"
+import html2canvas from "html2canvas"
 
 type TransferStep = 'recipient' | 'amount' | 'confirm' | 'pin' | 'success'
 
@@ -118,6 +119,43 @@ export default function TransferPage() {
       setPin("")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const handleDownloadReceipt = async (share: boolean = false) => {
+    const receiptEl = document.getElementById("transfer-receipt")
+    if (!receiptEl) return
+    
+    try {
+      // Add a slight delay for fonts/styles if needed, or directly capture
+      const canvas = await html2canvas(receiptEl, {
+        scale: 2,
+        backgroundColor: document.documentElement.classList.contains('dark') ? '#0f172a' : '#ffffff',
+        logging: false,
+      })
+      
+      canvas.toBlob(async (blob) => {
+        if (!blob) return
+        const file = new File([blob], `receipt_${txResult?.reference}.png`, { type: "image/png" })
+        
+        if (share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'Bukti Transfer SimBank',
+            text: 'Berikut adalah bukti transfer saya melalui SimBank.'
+          })
+        } else {
+          // Download fallback
+          const url = URL.createObjectURL(blob)
+          const link = document.createElement('a')
+          link.href = url
+          link.download = file.name
+          link.click()
+          URL.revokeObjectURL(url)
+        }
+      }, "image/png")
+    } catch (error) {
+      console.error("Failed to generate receipt", error)
     }
   }
 
@@ -334,7 +372,8 @@ export default function TransferPage() {
 
               {/* Receipt Card */}
               <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
-                <div className="glass rounded-3xl p-6 space-y-4" id="transfer-receipt">
+                <div className="glass rounded-3xl p-6 space-y-4 relative" id="transfer-receipt">
+                  <div className="absolute top-4 right-6 text-2xl font-bold opacity-10 text-primary-600">SimBank</div>
                   <div className="text-center border-b border-dashed border-slate-300 dark:border-slate-700 pb-4 space-y-1">
                     <p className="text-sm text-slate-500">Nominal</p>
                     <p className="text-3xl font-bold text-primary-600">{formatCurrency(BigInt(txResult.amount))}</p>
@@ -355,10 +394,10 @@ export default function TransferPage() {
 
               {/* Action buttons */}
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }} className="flex gap-3">
-                <Button variant="outline" className="flex-1 gap-2" onClick={() => alert('Fitur share akan datang!')}>
+                <Button variant="outline" className="flex-1 gap-2" onClick={() => handleDownloadReceipt(true)}>
                   <Share2 size={18} /> Bagikan
                 </Button>
-                <Button variant="outline" className="flex-1 gap-2" onClick={() => alert('Fitur download akan datang!')}>
+                <Button variant="outline" className="flex-1 gap-2" onClick={() => handleDownloadReceipt(false)}>
                   <Download size={18} /> Simpan
                 </Button>
               </motion.div>

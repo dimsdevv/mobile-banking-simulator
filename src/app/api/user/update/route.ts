@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma'
 
 export async function PUT(request: Request) {
   try {
-    const { userId, name, email, theme, language } = await request.json()
+    const { userId, name, email, theme, language, avatarUrl } = await request.json()
 
     if (!userId) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
@@ -14,6 +14,7 @@ export async function PUT(request: Request) {
     if (email !== undefined) updateData.email = email
     if (theme !== undefined) updateData.theme = theme
     if (language !== undefined) updateData.language = language
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl
 
     const user = await prisma.user.update({
       where: { id: userId },

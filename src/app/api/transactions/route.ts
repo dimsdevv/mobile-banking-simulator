@@ -96,9 +96,38 @@ export async function GET(request: Request) {
       createdAt: t.createdAt,
     }))
 
-    // Monthly summary
+    // Monthly summary & chart data
     const totalIn = all.filter(t => t.type === 'transfer_in').reduce((sum, t) => sum + t.amount, BigInt(0))
-    const totalOut = all.filter(t => t.type === 'transfer_out').reduce((sum, t) => sum + t.amount, BigInt(0))
+    const totalOut = all.filter(t => t.type !== 'transfer_in').reduce((sum, t) => sum + t.amount, BigInt(0)) // out and payment
+
+    // Group for chart (last 7 days of activity)
+    const grouped = new Map<string, { income: bigint, expense: bigint }>()
+    
+    // Initialize last 7 days with 0
+    for(let i=6; i>=0; i--) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const dateStr = d.toISOString().split('T')[0]
+      grouped.set(dateStr, { income: BigInt(0), expense: BigInt(0) })
+    }
+
+    all.forEach(t => {
+      const dateStr = new Date(t.createdAt).toISOString().split('T')[0]
+      if (grouped.has(dateStr)) {
+        const current = grouped.get(dateStr)!
+        if (t.type === 'transfer_in') {
+          current.income += t.amount
+        } else {
+          current.expense += t.amount
+        }
+      }
+    })
+
+    const chartData = Array.from(grouped.entries()).map(([date, data]) => ({
+      date: date.split('-').slice(1).join('/'), // MM/DD
+      income: Number(data.income) / 1000, // store in thousands for smaller chart numbers
+      expense: Number(data.expense) / 1000
+    }))
 
     return NextResponse.json({
       success: true,
@@ -108,6 +137,7 @@ export async function GET(request: Request) {
         totalIncome: totalIn.toString(),
         totalExpense: totalOut.toString(),
         transactionCount: total,
+        chartData
       }
     })
   } catch (error) {

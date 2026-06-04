@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/Button"
 import { Input } from "@/components/ui/Input"
 import { useAuthStore } from "@/stores/useAuthStore"
 import { formatCurrency, formatDate } from "@/lib/utils"
+import { SummaryChart } from "@/components/history/SummaryChart"
 
 interface Transaction {
   id: string
@@ -114,31 +115,39 @@ export default function HistoryPage() {
 
       <div className="container mx-auto px-4 max-w-md py-4 space-y-4">
 
-        {/* Summary Cards */}
+        {/* Summary Cards & Chart */}
         {summary && (
-          <div className="grid grid-cols-2 gap-3">
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-              className="p-4 glass rounded-2xl space-y-1"
-            >
-              <div className="flex items-center gap-2 text-green-600">
-                <TrendingUp size={16} />
-                <span className="text-xs font-medium">Pemasukan</span>
-              </div>
-              <p className="text-lg font-bold text-green-600">
-                {formatCurrency(BigInt(summary.totalIncome))}
-              </p>
-            </motion.div>
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-              className="p-4 glass rounded-2xl space-y-1"
-            >
-              <div className="flex items-center gap-2 text-red-500">
-                <TrendingDown size={16} />
-                <span className="text-xs font-medium">Pengeluaran</span>
-              </div>
-              <p className="text-lg font-bold text-red-500">
-                {formatCurrency(BigInt(summary.totalExpense))}
-              </p>
-            </motion.div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                className="p-4 glass rounded-2xl space-y-1"
+              >
+                <div className="flex items-center gap-2 text-green-600">
+                  <TrendingUp size={16} />
+                  <span className="text-xs font-medium">Pemasukan</span>
+                </div>
+                <p className="text-lg font-bold text-green-600">
+                  {formatCurrency(BigInt(summary.totalIncome))}
+                </p>
+              </motion.div>
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+                className="p-4 glass rounded-2xl space-y-1"
+              >
+                <div className="flex items-center gap-2 text-red-500">
+                  <TrendingDown size={16} />
+                  <span className="text-xs font-medium">Pengeluaran</span>
+                </div>
+                <p className="text-lg font-bold text-red-500">
+                  {formatCurrency(BigInt(summary.totalExpense))}
+                </p>
+              </motion.div>
+            </div>
+            
+            {summary.chartData && (
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
+                <SummaryChart data={summary.chartData} />
+              </motion.div>
+            )}
           </div>
         )}
 

@@ -1,6 +1,23 @@
+"use client"
+
+import * as React from "react"
+import { useRouter } from "next/navigation"
 import { LoginForm } from "@/components/auth/LoginForm"
 
 export default function LoginPage() {
+  const router = useRouter()
+  const [isReady, setIsReady] = React.useState(false)
+
+  React.useEffect(() => {
+    if (localStorage.getItem('simbank_onboarded') !== 'true') {
+      router.push('/onboarding')
+    } else {
+      setIsReady(true)
+    }
+  }, [router])
+
+  if (!isReady) return null
+
   return (
     <main className="min-h-screen flex items-center justify-center p-4 bg-slate-50 dark:bg-background relative overflow-hidden">
       {/* Decorative background blobs */}

@@ -1,0 +1,18 @@
+{
+  "name": "SimBank - Mobile Banking UI Simulator",
+  "short_name": "SimBank",
+  "description": "Mobile Banking UI Simulator for Portfolio",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0066FF",
+  "theme_color": "#0066FF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-512x512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}
