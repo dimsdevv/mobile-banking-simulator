@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  name          String
+  email         String   @unique
+  avatarUrl     String?
+  accountNumber String   @unique
+  pinHash       String
+  balance       BigInt   @default(12500000)
+  theme         String   @default("system")
+  language      String   @default("id")
+  isOnboarded   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  sentTransactions     Transaction[] @relation("Sender")
+  receivedTransactions Transaction[] @relation("Recipient")
+  savedRecipients      SavedRecipient[]
+
+  @@map("users")
+}
+
+model Transaction {
+  id          String   @id @default(uuid())
+  type        String
+  amount      BigInt
+  fee         BigInt   @default(0)
+  totalAmount BigInt
+  description String?
+  reference   String   @unique
+  status      String   @default("success")
+  category    String   @default("transfer")
+
+  senderId        String?
+  sender          User?   @relation("Sender", fields: [senderId], references: [id])
+  senderName      String
+  senderAccount   String
+  senderBank      String  @default("SimBank")
+
+  recipientId      String?
+  recipient        User?   @relation("Recipient", fields: [recipientId], references: [id])
+  recipientName    String
+  recipientAccount String
+  recipientBank    String
+
+  createdAt DateTime @default(now())
+
+  @@index([senderId, createdAt(sort: Desc)])
+  @@index([recipientId, createdAt(sort: Desc)])
+  @@map("transactions")
+}
+
+model SavedRecipient {
+  id            String   @id @default(uuid())
+  name          String
+  accountNumber String
+  bankName      String
+  avatarUrl     String?
+  isFavorite    Boolean  @default(false)
+  lastUsed      DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, accountNumber])
+  @@map("saved_recipients")
+}

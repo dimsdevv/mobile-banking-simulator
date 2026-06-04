@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #E6F0FF;
+  --color-primary-100: #CCE0FF;
+  --color-primary-200: #99C2FF;
+  --color-primary-300: #66A3FF;
+  --color-primary-400: #3385FF;
+  --color-primary-500: #0066FF;
+  --color-primary-600: #0052CC;
+  --color-primary-700: #003D99;
+  --color-primary-800: #002966;
+  --color-primary-900: #001433;
+  
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  
+  --animate-shake: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+  
+  @keyframes shake {
+    10%, 90% { transform: translate3d(-1px, 0, 0); }
+    20%, 80% { transform: translate3d(2px, 0, 0); }
+    30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+    40%, 60% { transform: translate3d(4px, 0, 0); }
+  }
+}
+
+:root {
+  --background: #FFFFFF;
+  --foreground: #0F172A;
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(226, 232, 240, 0.8);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #000B1D;
+    --foreground: #F8FAFC;
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* Fallback for class-based dark mode */
+.dark {
+  --background: #000B1D;
+  --foreground: #F8FAFC;
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.08);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+@utility glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
