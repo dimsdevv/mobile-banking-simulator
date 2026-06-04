@@ -44,6 +44,10 @@ export async function POST(request: Request) {
         }
       })
 
+      // 4. Create notification
+      const title = 'Top Up Berhasil'
+      const msg = `Saldo sebesar Rp ${topupAmount.toLocaleString('id-ID')} telah berhasil ditambahkan ke akun Anda via ${bank}.`
+
       await tx.notification.create({
         data: {
           title,
