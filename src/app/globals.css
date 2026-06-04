@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-primary-50: #E6F0FF;
   --color-primary-100: #CCE0FF;
@@ -31,16 +33,6 @@
   --glass-border: rgba(226, 232, 240, 0.8);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #000B1D;
-    --foreground: #F8FAFC;
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.08);
-  }
-}
-
-/* Fallback for class-based dark mode */
 .dark {
   --background: #000B1D;
   --foreground: #F8FAFC;
@@ -51,6 +43,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 @utility glass {
@@ -59,3 +52,4 @@ body {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
 }
+
